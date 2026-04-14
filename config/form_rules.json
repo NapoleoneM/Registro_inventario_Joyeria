@@ -1,0 +1,38 @@
+{
+  "dropdown_options": {
+    "material": ["Oro", "Plata"],
+    "qts_ley": ["18K", "14K", "10K", "925"],
+    "modelo_precio": ["Pesado", "Oferta", "Pulsera Combo", "Con Piedra", "Piercing", "Fabricación"],
+    "categoria": ["Anillo", "Anillo Tejido", "Bola", "Broche", "Cadena", "Candongas", "Dije", "Herraje", "Piercing", "Pulsera Tejida", "Pulso", "Pulso Modulable", "Pulso Bebé", "Rosario", "Tobillera", "Topos", "Set", "Set Cadena y Dije", "Rosca de Seguridad"]
+  },
+  "dependencies": {
+    "material_to_qts": {
+      "Oro": ["18K", "14K", "10K"],
+      "Plata": ["925"]
+    }
+  },
+  "conditional_fields": {
+    "by_category": {
+      "Anillo": { "mandatory": ["Talla (Anillos)"], "optional": [] },
+      "Anillo Tejido": { "mandatory": ["Talla (Anillos)"], "optional": [] },
+      "Cadena": { "mandatory": ["(cm) Obligatorio", "(mm) Grosor"], "optional": [] },
+      "Pulso": { "mandatory": ["(cm) Obligatorio", "(mm) Grosor"], "optional": [] },
+      "Pulso Modulable": { "mandatory": ["(cm) Obligatorio", "(mm) Grosor"], "optional": ["(cm) Opcional"] },
+      "Pulso Bebé": { "mandatory": ["(cm) Obligatorio", "(mm) Grosor"], "optional": [] },
+      "Rosario": { "mandatory": ["(cm) Obligatorio", "(mm) Grosor"], "optional": [] },
+      "Tobillera": { "mandatory": ["(cm) Obligatorio", "(mm) Grosor"], "optional": [] },
+      "Set Cadena y Dije": { "mandatory": ["(cm) Obligatorio", "(mm) Grosor", "Set Crea. 1", "Set Crea. 2", "Set D. cm"], "optional": [] },
+      "Candongas": { "mandatory": ["(cm) Obligatorio"], "optional": [] },
+      "Dije": { "mandatory": ["(cm) Obligatorio"], "optional": [] },
+      "Herraje": { "mandatory": ["(cm) Obligatorio"], "optional": [] },
+      "Piercing": { "mandatory": ["(cm) Obligatorio"], "optional": [] },
+      "Bola": { "mandatory": ["(mm) Grosor"], "optional": [] },
+      "Topos": { "mandatory": ["(mm) Grosor"], "optional": [] }
+    },
+    "by_price_model": {
+      "Pesado": { "mandatory": ["Peso (gr)", "Recargo", "Broche", "Color Oro", "Genero", "Ubicación", "Creativo"] },
+      "Oferta": { "mandatory": ["Peso (gr)", "Recargo", "Broche", "Color Oro", "Genero", "Ubicación", "Creativo", "Peso Set 2 (gr)", "Recargo (Solo Set 2)", "Descuento %"] },
+      "Con Piedra": { "mandatory": ["Peso (gr)", "Recargo", "Broche", "Color Oro", "Genero", "Ubicación", "Creativo", "Costo Manual", "Piedra"] }
+    }
+  }
+}
