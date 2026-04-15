@@ -28,6 +28,8 @@ def limpiar_formulario_parcial():
     int_keys = ['in_desc', 'in_costo']
     for k in int_keys:
         if k in st.session_state: st.session_state[k] = 0
+        
+    if 'in_cantidades' in st.session_state: st.session_state['in_cantidades'] = 1
 
 def mostrar_formulario():
     # --- MEMORIA Y SEGURIDAD ---
@@ -203,6 +205,8 @@ def mostrar_formulario():
             
         with c_gen3:
             coleccion = st.selectbox("Colección (Opcional)", opc_coleccion, key="in_coleccion")
+            cantidades = st.number_input("Cantidades *", min_value=1, step=1, format="%d", key="in_cantidades")
+            if cantidades <= 0: errores_validacion.append("Cantidades")
             
         adicional = st.text_input("Adicional (Colores-Formas) (Opcional)", key="in_adicional")
 
@@ -261,6 +265,7 @@ def mostrar_formulario():
             val_broche = st.session_state.get('in_broche', "Seleccione...")
             val_genero = st.session_state.get('in_genero', "Seleccione...")
             val_coleccion = st.session_state.get('in_coleccion', "Ninguna")
+            val_cantidades = st.session_state.get('in_cantidades', 1)
             
             val_piedra = st.session_state.get('in_piedra', [])
             
@@ -268,11 +273,11 @@ def mostrar_formulario():
             val_rec2 = st.session_state.get('in_rec2', "Seleccione...")
             
             # --- FORMATEO FINAL ---
-            creativo_upper = val_creativo.upper() if val_creativo and not es_set else ""
+            creativo_final = val_creativo.capitalize() if val_creativo and not es_set else ""
             talla_anillo_upper = val_talla.upper() if val_talla else ""
-            set_c_1_upper = val_set1.upper() if val_set1 else ""
-            set_c_2_upper = val_set2.upper() if val_set2 else ""
-            adicional_upper = val_adic.upper() if val_adic else ""
+            set_c_1_final = val_set1.capitalize() if val_set1 else ""
+            set_c_2_final = val_set2.capitalize() if val_set2 else ""
+            adicional_final = val_adic.capitalize() if val_adic else ""
             ubicacion_final = val_ubi if val_ubi != "Seleccione..." else ""
             broche_final = val_broche if val_broche != "Seleccione..." else ""
             genero_final = val_genero if val_genero != "Seleccione..." else ""
@@ -289,12 +294,10 @@ def mostrar_formulario():
             
             piedra_final = ", ".join(val_piedra) if len(val_piedra) > 0 else ""
             
-            coleccion_final = "" if val_coleccion == "Ninguna" else val_coleccion
+            coleccion_final = val_coleccion
             costo_manual_final = "" if st.session_state.get('in_costo', 0) == 0 else st.session_state.get('in_costo', 0)
             
             # --- SOLUCIÓN DEL DESCUENTO CON SÍMBOLO % ---
-            # Al concatenar el símbolo %, Sheets activa su propio reconocimiento de porcentajes 
-            # y transforma "7%" en el valor real 0.07 conservando el diseño visual de "7,00%".
             val_desc = st.session_state.get('in_desc', 0)
             descuento_final = f"{val_desc}%" if val_desc > 0 else ""
 
@@ -311,18 +314,19 @@ def mostrar_formulario():
                 "I": costo_manual_final,
                 "J": piedra_final,
                 "K": descuento_final,
-                "N": creativo_upper,
+                "N": creativo_final,
                 "O": color_oro,
                 "P": cm_oblig_fmt,
                 "Q": cm_opc_fmt,
                 "R": grosor_mm_fmt,
                 "S": talla_anillo_upper,
-                "T": set_c_1_upper,
-                "U": set_c_2_upper,
+                "T": set_c_1_final,
+                "U": set_c_2_final,
                 "V": set_d_cm_fmt,
-                "W": adicional_upper,
+                "W": adicional_final,
                 "Y": broche_final,
                 "Z": coleccion_final,
+                "AA": val_cantidades,
                 "AC": genero_final,
                 "AD": ubicacion_final
             }
