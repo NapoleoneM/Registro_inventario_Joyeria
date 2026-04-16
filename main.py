@@ -3,7 +3,7 @@ from ui.login_view import mostrar_login
 from ui.form_view import mostrar_formulario
 
 # Configuración básica de la pestaña del navegador
-st.set_page_config(page_title="Registros Auxiliares", page_icon="📝")
+st.set_page_config(page_title="Registros Auxiliares", page_icon="📝🦁")
 
 def main():
     # Inicializar la variable de sesión si es la primera vez que entra
