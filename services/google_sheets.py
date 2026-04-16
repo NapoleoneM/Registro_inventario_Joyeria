@@ -77,8 +77,8 @@ def limpiar_registros(sheet_id):
             
         pestaña_ubicacion = doc.worksheet("Ubicación")
         
-        # Limpiamos Inputs por rangos específicos
-        rangos_inputs = ["A2:K3000", "N2:W3000", "Y2:Z3000", "AC2:AD3000"]
+        # Limpiamos Inputs por rangos específicos (Se añadió AA2:AB3000)
+        rangos_inputs = ["A2:K3000", "N2:W3000", "Y2:Z3000", "AA2:AB3000", "AC2:AD3000"]
         pestaña_inputs.batch_clear(rangos_inputs)
         
         # Limpiamos Ubicación
