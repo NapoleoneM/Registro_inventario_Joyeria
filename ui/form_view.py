@@ -175,7 +175,7 @@ def mostrar_formulario():
     opc_genero = ["Seleccione...", "Hombre", "Mujer", "Unisex"]
     opc_coleccion = ["Ninguna", "Italian Chunky", "Tienda de Letras", "Zodiaco", "Emojis", "Futboleros"]
     opc_piedras_disp = ["Esmeralda", "Diamante", "Zafiro", "Rubí"]
-    opc_ubicacion = ["Seleccione...", "Bodega 429 Medellin", "Mostrador 424 Medellin", "Ofi. Piso 3° Medellin", "Santafe CC Medellin", "Cosacut CC Cucuta", "Local 7 Cali", "Local 568 Cali", "Mezanine 648 Cali", "Chipichape CC Cali", "Unicentro CC Cali", "USA-M", "USA-C", "USA", "Feria Effix Med"]
+    opc_ubicacion = ["Seleccione...", "Bodega 429 Medellin", "Mostrador 424 Medellin", "Ofi. Piso 3° Medellin", "Santafe CC Medellin", "El Tesoro CC Medellin", "Cosacut CC Cucuta", "Local 7 Cali", "Local 568 Cali", "Mezanine 648 Cali", "Chipichape CC Cali", "Unicentro CC Cali", "USA-M", "USA-C", "USA", "Feria Effix Med"]
     colores_oro = ["Seleccione...", "Oro Amarillo", "Oro Blanco", "Oro Rosa", "Dos Oros Amarillo Blanco", "Dos Oros Amarillo Rosa", "Dos Oros Blanco Rosa", "Dos Oros Negro Amarillo", "Dos Oros Negro Rosa", "Dos Oros Negro Blanco", "Tres Oros"]
     colores_plata = ["Seleccione...", "Plata", "Plata Rodinada", "Plata Vermeil", "Plata Rosé"]
     recargos_oro = ["Seleccione...", "Recargo +1", "Recargo +2", "Recargo +3", "Recargo +4", "Nacional Corriente", "Nacional Especial", "Oro 14K Italiano"]
