@@ -89,3 +89,62 @@ def limpiar_registros(sheet_id):
     except Exception as e:
         print(f"Error al limpiar datos: {e}")
         return False
+
+def obtener_ultimos_registros(sheet_id, n=5):
+    doc = conectar_documento(sheet_id)
+    if not doc:
+        return None
+    try:
+        hoja = doc.worksheet(WORKSHEET_NAME)
+        todos = hoja.get_all_values()
+        if len(todos) <= 1:
+            return []
+        # Solo filas donde col A (Material) tiene dato real, ignorando filas de fórmulas vacías
+        filas_con_datos = [
+            {"fila": i + 2, "datos": fila}
+            for i, fila in enumerate(todos[1:])
+            if fila and fila[0].strip()
+        ]
+        return filas_con_datos[-n:]
+    except Exception as e:
+        print(f"Error obteniendo últimos registros: {e}")
+        return None
+
+def eliminar_fila(sheet_id, fila_numero):
+    doc = conectar_documento(sheet_id)
+    if not doc:
+        return False
+    try:
+        doc.worksheet(WORKSHEET_NAME).delete_rows(fila_numero)
+        doc.worksheet("Ubicación").delete_rows(fila_numero)
+        return True
+    except Exception as e:
+        print(f"Error eliminando fila {fila_numero}: {e}")
+        return False
+
+def actualizar_fila(sheet_id, fila_numero, datos_inputs, datos_ubicacion):
+    doc = conectar_documento(sheet_id)
+    if not doc:
+        return False
+    try:
+        hoja_inputs = doc.worksheet(WORKSHEET_NAME)
+        batch_inputs = [
+            {'range': f"{col}{fila_numero}", 'values': [[val]]}
+            for col, val in datos_inputs.items()
+        ]
+        hoja_inputs.batch_update(batch_inputs, value_input_option="USER_ENTERED")
+
+        hoja_ubi = doc.worksheet("Ubicación")
+        if datos_ubicacion:
+            batch_ubi = [
+                {'range': f"{col}{fila_numero}", 'values': [[val]]}
+                for col, val in datos_ubicacion.items()
+            ]
+            hoja_ubi.batch_update(batch_ubi, value_input_option="USER_ENTERED")
+        else:
+            hoja_ubi.batch_clear([f"C{fila_numero}:E{fila_numero}"])
+
+        return True
+    except Exception as e:
+        print(f"Error actualizando fila {fila_numero}: {e}")
+        return False

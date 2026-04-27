@@ -3,13 +3,15 @@ import time
 from services.auth import autenticar_usuario
 
 def mostrar_login():
-    st.title("🦁💍 Napoleone Joyas - Acceso")
-    
+    _, col_logo, _ = st.columns([1, 2, 1])
+    with col_logo:
+        st.image("assets/5.png", use_container_width=True)
+
     with st.container():
         st.markdown("### Iniciar Sesión")
         usuario = st.text_input("Usuario")
         password = st.text_input("Contraseña", type="password")
-        
+
         if st.button("Ingresar", type="primary", use_container_width=True):
             if usuario and password:
                 with st.spinner("Validando credenciales..."):

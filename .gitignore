@@ -1,5 +1,6 @@
 __pycache__/
 .env
 credentials/credenciales.json
+CLAUDE.md
 .venv/
 env/

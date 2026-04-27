@@ -1,6 +1,6 @@
 import streamlit as st
 from datetime import datetime
-from services.google_sheets import agregar_registro, limpiar_registros
+from services.google_sheets import agregar_registro, limpiar_registros, obtener_ultimos_registros, eliminar_fila, actualizar_fila
 
 # --- FUNCIÓN DE UTILIDAD PARA FORMATEO ---
 def formato_decimal_sheets(valor):
@@ -31,12 +31,68 @@ def limpiar_formulario_parcial():
         
     if 'in_cantidades' in st.session_state: st.session_state['in_cantidades'] = 1
 
+def _prepopular_formulario(datos):
+    def to_float(v):
+        try: return float(str(v).replace(',', '.'))
+        except: return 0.0
+    def to_int(v):
+        try: return int(str(v).replace('%', '').strip())
+        except: return 0
+    def get(i, default=""):
+        return datos[i] if i < len(datos) and datos[i] else default
+
+    material = get(0, "Seleccione...")
+    st.session_state.sel_mat      = material
+    st.session_state.sel_mod      = get(1, "Seleccione...")
+    st.session_state.sel_cat      = get(3, "Seleccione...")
+    if material == "Oro":
+        st.session_state.sel_qts_o = get(2, "Seleccione...")
+        st.session_state.sel_col_o = get(14, "Seleccione...")
+    elif material == "Plata":
+        st.session_state.sel_col_p = get(14, "Seleccione...")
+    st.session_state.in_peso      = to_float(get(4))
+    st.session_state.in_rec1      = get(5, "Seleccione...")
+    st.session_state.in_peso2     = to_float(get(6))
+    st.session_state.in_rec2      = get(7, "Seleccione...")
+    st.session_state.in_costo     = to_int(get(8))
+    piedra_str = get(9)
+    st.session_state.in_piedra    = [p.strip() for p in piedra_str.split(',') if p.strip()] if piedra_str else []
+    st.session_state.in_desc      = to_int(get(10))
+    st.session_state.in_creativo  = get(13)
+    st.session_state.in_cm_ob     = to_float(get(15))
+    st.session_state.in_cm_op     = to_float(get(16))
+    st.session_state.in_mm        = to_float(get(17))
+    st.session_state.in_talla     = get(18)
+    st.session_state.in_set1      = get(19)
+    st.session_state.in_set2      = get(20)
+    st.session_state.in_setd      = to_float(get(21))
+    st.session_state.in_adicional = get(22)
+    st.session_state.in_broche    = get(24, "Seleccione...")
+    st.session_state.in_coleccion = get(25, "Ninguna")
+    st.session_state.in_cantidades = max(1, to_int(get(26)) or 1)
+    st.session_state.in_genero    = get(28, "Seleccione...")
+    st.session_state.in_ubicacion = get(29, "Seleccione...")
+
+
 def mostrar_formulario():
     # --- MEMORIA Y SEGURIDAD ---
     if 'pop_col' not in st.session_state: st.session_state.pop_col = ""
     if 'pop_pano' not in st.session_state: st.session_state.pop_pano = ""
     if 'pop_celda' not in st.session_state: st.session_state.pop_celda = ""
     if 'hoja_limpia' not in st.session_state: st.session_state.hoja_limpia = False
+    if 'historial_cache' not in st.session_state: st.session_state.historial_cache = None
+    if 'fila_editando' not in st.session_state: st.session_state.fila_editando = None
+
+    # --- PROCESAR ELIMINACIÓN PENDIENTE (antes de renderizar widgets) ---
+    if '_fila_a_eliminar' in st.session_state:
+        _fila_del = st.session_state['_fila_a_eliminar']
+        del st.session_state['_fila_a_eliminar']
+        _sid = st.session_state.get('sheet_asignado')
+        if eliminar_fila(_sid, _fila_del):
+            st.session_state.historial_cache = obtener_ultimos_registros(_sid, n=5)
+            st.success(f"Fila {_fila_del} eliminada. Los registros inferiores se desplazaron.")
+        else:
+            st.error(f"No se pudo eliminar la fila {_fila_del}. Revisa el terminal.")
 
     # --- INICIALIZACIÓN OBLIGATORIA DE VARIABLES ---
     peso = peso_2 = cm_oblig = cm_opc = grosor_mm = set_d_cm = 0.0
@@ -46,10 +102,28 @@ def mostrar_formulario():
 
     # --- UI: AUXILIAR EN LA PARTE SUPERIOR ---
     auxiliar_actual = st.session_state.get('usuario_logueado', 'Desconocido')
-    st.markdown(f"## 👤 {auxiliar_actual}")
-    st.markdown("## Registro inventario de Joyería 🦁")
-    st.markdown("*Campos obligatorios según selección")
+
+    col_titulo, col_logo = st.columns([4, 1])
+    with col_titulo:
+        st.markdown(f"## {auxiliar_actual}")
+        st.markdown("## Registro inventario de Joyería")
+        st.markdown("*Campos obligatorios según selección")
+    with col_logo:
+        st.image("assets/1.png", use_container_width=True)
+
     st.divider()
+
+    if st.session_state.fila_editando:
+        col_banner, col_cancel = st.columns([5, 1])
+        with col_banner:
+            st.warning(f"Modo Edición — Fila {st.session_state.fila_editando}. Modifica los datos y presiona **Actualizar Registro**.")
+        with col_cancel:
+            if st.button("Cancelar edición", key="btn_cancel_edit"):
+                st.session_state.fila_editando = None
+                for k in ['sel_mat', 'sel_mod', 'sel_cat', 'sel_qts_o', 'sel_col_o', 'sel_col_p']:
+                    if k in st.session_state: del st.session_state[k]
+                limpiar_formulario_parcial()
+                st.rerun()
 
     # Listas
     opc_modelo = ["Seleccione...", "Pesado", "Oferta", "Pulsera Combo", "Con Piedra", "Piercing", "Fabricación"]
@@ -254,7 +328,8 @@ def mostrar_formulario():
         if bloquear_boton:
             st.error(f"Faltan datos obligatorios para este modelo/categoría: {', '.join(errores_validacion)}")
             
-        if st.button("Guardar Registro", type="primary", disabled=bloquear_boton, use_container_width=True):
+        lbl_guardar = "Actualizar Registro" if st.session_state.fila_editando else "Guardar Registro"
+        if st.button(lbl_guardar, type="primary", disabled=bloquear_boton, use_container_width=True):
             
             val_creativo = st.session_state.get('in_creativo', "")
             val_talla = st.session_state.get('in_talla', "")
@@ -340,18 +415,64 @@ def mostrar_formulario():
                     "E": st.session_state.pop_celda
                 }
             
-            with st.spinner('Enviando datos a la nube...'):
+            fila_edit = st.session_state.fila_editando
+            with st.spinner('Actualizando en la nube...' if fila_edit else 'Enviando datos a la nube...'):
                 mi_archivo_id = st.session_state.get('sheet_asignado')
-                exito = agregar_registro(datos_a_guardar, datos_ubicacion_guardar, mi_archivo_id)
-                
+                if fila_edit:
+                    exito = actualizar_fila(mi_archivo_id, fila_edit, datos_a_guardar, datos_ubicacion_guardar)
+                else:
+                    exito = agregar_registro(datos_a_guardar, datos_ubicacion_guardar, mi_archivo_id)
+
             if exito:
-                st.success(f"Registro exitoso! (Auxiliar: {auxiliar_actual})")
-                st.session_state.hoja_limpia = False 
+                if fila_edit:
+                    st.success(f"Fila {fila_edit} actualizada! (Auxiliar: {auxiliar_actual})")
+                    st.session_state.fila_editando = None
+                else:
+                    st.success(f"Registro exitoso! (Auxiliar: {auxiliar_actual})")
+                st.session_state.hoja_limpia = False
+                st.session_state.historial_cache = obtener_ultimos_registros(mi_archivo_id, n=5)
                 st.button("Registrar Nuevo Artículo", type="secondary", on_click=limpiar_formulario_parcial)
             else:
                 st.error("Hubo un problema de conexión. Revisa tu terminal.")
     else:
         st.info("Selecciona Material, Modelo y Categoría para comenzar la cotización.")
+
+    st.divider()
+    st.subheader("Registros Recientes")
+    st.caption("Muestra los últimos 5 registros. Para corregir uno, elimínalo y vuelve a ingresarlo desde el formulario.")
+
+    col_ref, _ = st.columns([1, 5])
+    with col_ref:
+        if st.button("↻ Actualizar", key="btn_refresh_hist"):
+            st.session_state.historial_cache = obtener_ultimos_registros(
+                st.session_state.get('sheet_asignado'), n=5
+            )
+
+    historial = st.session_state.get('historial_cache')
+
+    if historial is None:
+        st.caption("Guarda un registro o presiona Actualizar para cargar el historial.")
+    elif len(historial) == 0:
+        st.info("No hay registros guardados aún.")
+    else:
+        COLS = {0: "Material", 1: "Modelo", 3: "Categoría", 14: "Color",
+                4: "Peso", 13: "Creativo", 26: "Cant.", 29: "Ubicación"}
+        for reg in reversed(historial):
+            fila_num = reg["fila"]
+            datos = reg["datos"]
+            partes = [f"**{lbl}:** {datos[i]}" for i, lbl in COLS.items() if i < len(datos) and datos[i]]
+            col_info, col_edit, col_del = st.columns([4, 1, 1])
+            with col_info:
+                st.markdown(f"Fila {fila_num} — " + " · ".join(partes))
+            with col_edit:
+                if st.button("Editar", key=f"edit_{fila_num}"):
+                    _prepopular_formulario(datos)
+                    st.session_state.fila_editando = fila_num
+                    st.rerun()
+            with col_del:
+                if st.button("Eliminar", key=f"del_{fila_num}"):
+                    st.session_state['_fila_a_eliminar'] = fila_num
+                    st.rerun()
 
     st.divider()
     st.subheader("Zona de Administración")
