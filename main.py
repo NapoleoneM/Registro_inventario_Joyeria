@@ -1,10 +1,11 @@
 import streamlit as st
 import time
+from PIL import Image
 from ui.login_view import mostrar_login
 from ui.form_view import mostrar_formulario
 
 # Configuración básica de la pestaña del navegador
-st.set_page_config(page_title="Registros Auxiliares", page_icon="📝🦁")
+st.set_page_config(page_title="Registros Auxiliares", page_icon=Image.open("assets/favicon.ico"))
 
 def main():
     # 1. Inicializar variables de sesión básicas y de seguridad

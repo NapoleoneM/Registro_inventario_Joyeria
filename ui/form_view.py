@@ -1,6 +1,8 @@
 import streamlit as st
 from datetime import datetime
-from services.google_sheets import agregar_registro, limpiar_registros, obtener_ultimos_registros, eliminar_fila, actualizar_fila
+import io
+import openpyxl
+from services.google_sheets import agregar_registro, limpiar_registros, obtener_ultimos_registros, eliminar_fila, actualizar_fila, obtener_effiload
 
 # --- FUNCIÓN DE UTILIDAD PARA FORMATEO ---
 def formato_decimal_sheets(valor):
@@ -31,12 +33,24 @@ def limpiar_formulario_parcial():
         
     if 'in_cantidades' in st.session_state: st.session_state['in_cantidades'] = 1
 
+def _generar_xlsx(datos):
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "EFFILoad"
+    for fila in datos:
+        ws.append(fila)
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf.getvalue()
+
+
 def _prepopular_formulario(datos):
     def to_float(v):
         try: return float(str(v).replace(',', '.'))
         except: return 0.0
     def to_int(v):
-        try: return int(str(v).replace('%', '').strip())
+        try: return int(float(str(v).replace('%', '').strip()))
         except: return 0
     def get(i, default=""):
         return datos[i] if i < len(datos) and datos[i] else default
@@ -82,8 +96,17 @@ def mostrar_formulario():
     if 'hoja_limpia' not in st.session_state: st.session_state.hoja_limpia = False
     if 'historial_cache' not in st.session_state: st.session_state.historial_cache = None
     if 'fila_editando' not in st.session_state: st.session_state.fila_editando = None
+    if 'effiload_xlsx' not in st.session_state: st.session_state.effiload_xlsx = None
+    if 'effiload_n' not in st.session_state: st.session_state.effiload_n = 0
+    if 'effiload_nombre' not in st.session_state: st.session_state.effiload_nombre = 'EFFILoad.xlsx'
 
-    # --- PROCESAR ELIMINACIÓN PENDIENTE (antes de renderizar widgets) ---
+    # --- PROCESAR ACCIONES PENDIENTES (antes de renderizar cualquier widget) ---
+    if '_datos_a_editar' in st.session_state:
+        _info_editar = st.session_state['_datos_a_editar']
+        del st.session_state['_datos_a_editar']
+        st.session_state.fila_editando = _info_editar['fila']
+        _prepopular_formulario(_info_editar['datos'])
+
     if '_fila_a_eliminar' in st.session_state:
         _fila_del = st.session_state['_fila_a_eliminar']
         del st.session_state['_fila_a_eliminar']
@@ -466,13 +489,49 @@ def mostrar_formulario():
                 st.markdown(f"Fila {fila_num} — " + " · ".join(partes))
             with col_edit:
                 if st.button("Editar", key=f"edit_{fila_num}"):
-                    _prepopular_formulario(datos)
-                    st.session_state.fila_editando = fila_num
+                    st.session_state['_datos_a_editar'] = {'fila': fila_num, 'datos': datos}
                     st.rerun()
             with col_del:
                 if st.button("Eliminar", key=f"del_{fila_num}"):
                     st.session_state['_fila_a_eliminar'] = fila_num
                     st.rerun()
+
+    st.divider()
+    st.subheader("Exportar a Excel")
+    st.caption("Genera un .xlsx con los registros actuales de EFFILoad — solo filas con datos reales, sin fórmulas vacías.")
+
+    if st.session_state.effiload_xlsx is None:
+        if st.button("Exportar EFFILoad (.xlsx)", key="btn_exportar"):
+            _sid = st.session_state.get('sheet_asignado')
+            with st.spinner("Leyendo EFFILoad y generando archivo..."):
+                datos_effi = obtener_effiload(_sid)
+            if datos_effi is None:
+                st.error("No se pudo conectar a la hoja EFFILoad. Verifica que exista en el Sheets.")
+            elif len(datos_effi) <= 1:
+                st.info("EFFILoad no tiene registros con datos aún.")
+            else:
+                fecha    = datetime.now().strftime("%Y-%m-%d")
+                usuario  = st.session_state.get('usuario_logueado', 'Auxiliar')
+                st.session_state.effiload_xlsx   = _generar_xlsx(datos_effi)
+                st.session_state.effiload_n      = len(datos_effi) - 1
+                st.session_state.effiload_nombre = f"EFFILoad_{fecha}_{usuario}.xlsx"
+                st.rerun()
+    else:
+        nombre_archivo = st.session_state.get('effiload_nombre', 'EFFILoad.xlsx')
+        st.success(f"Archivo listo — {st.session_state.effiload_n} registros · {nombre_archivo}")
+        col_dl, col_reset = st.columns([2, 1])
+        with col_dl:
+            st.download_button(
+                label="Descargar",
+                data=st.session_state.effiload_xlsx,
+                file_name=nombre_archivo,
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="btn_dl_effi"
+            )
+        with col_reset:
+            if st.button("Nueva exportación", key="btn_nueva_exp"):
+                st.session_state.effiload_xlsx = None
+                st.rerun()
 
     st.divider()
     st.subheader("Zona de Administración")
