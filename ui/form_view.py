@@ -34,11 +34,31 @@ def limpiar_formulario_parcial():
     if 'in_cantidades' in st.session_state: st.session_state['in_cantidades'] = 1
 
 def _generar_xlsx(datos):
+    INT_COLS   = {2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 20, 26, 28, 30}
+    FLOAT_COLS = {19}
+
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "EFFILoad"
-    for fila in datos:
-        ws.append(fila)
+    for row_idx, fila in enumerate(datos):
+        if row_idx == 0:
+            ws.append(fila)
+            continue
+        fila_convertida = []
+        for col_idx, val in enumerate(fila):
+            if col_idx in INT_COLS:
+                try:
+                    fila_convertida.append(int(float(str(val).replace(',', '.'))))
+                except (ValueError, TypeError):
+                    fila_convertida.append(val)
+            elif col_idx in FLOAT_COLS:
+                try:
+                    fila_convertida.append(float(str(val).replace(',', '.')))
+                except (ValueError, TypeError):
+                    fila_convertida.append(val)
+            else:
+                fila_convertida.append(val)
+        ws.append(fila_convertida)
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)
@@ -510,11 +530,13 @@ def mostrar_formulario():
             elif len(datos_effi) <= 1:
                 st.info("EFFILoad no tiene registros con datos aún.")
             else:
-                fecha    = datetime.now().strftime("%Y-%m-%d")
+                ahora    = datetime.now()
+                fecha    = ahora.strftime("%Y-%m-%d")
+                hora     = ahora.strftime("%H-%M")
                 usuario  = st.session_state.get('usuario_logueado', 'Auxiliar')
                 st.session_state.effiload_xlsx   = _generar_xlsx(datos_effi)
                 st.session_state.effiload_n      = len(datos_effi) - 1
-                st.session_state.effiload_nombre = f"EFFILoad_{fecha}_{usuario}.xlsx"
+                st.session_state.effiload_nombre = f"EFFILoad_{fecha}_{hora}_{usuario}.xlsx"
                 st.rerun()
     else:
         nombre_archivo = st.session_state.get('effiload_nombre', 'EFFILoad.xlsx')
