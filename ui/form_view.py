@@ -265,8 +265,9 @@ def mostrar_formulario():
         c_med1, c_med2, c_med3 = st.columns(3)
         with c_med1:
             if categoria in cat_cuello_muneca or categoria in cat_complementarias_medida or categoria == "Pulso Modulable":
-                cm_oblig = st.number_input("(cm) Obligatorio *", min_value=0.0, step=0.5, key="in_cm_ob")
-                if cm_oblig <= 0: errores_validacion.append("(cm) Obligatorio")
+                lbl_cm = "(cm) (Opcional)" if categoria == "Pulsera Tejida" else "(cm) Obligatorio *"
+                cm_oblig = st.number_input(lbl_cm, min_value=0.0, step=0.5, key="in_cm_ob")
+                if cm_oblig <= 0 and categoria != "Pulsera Tejida": errores_validacion.append("(cm) Obligatorio")
         with c_med2:
             if categoria in cat_cuello_muneca or categoria in cat_volumen or categoria == "Pulso Modulable":
                 grosor_mm = st.number_input("(mm) Grosor *", min_value=0.0, step=0.1, key="in_mm")
