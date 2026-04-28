@@ -34,7 +34,7 @@ def limpiar_formulario_parcial():
     if 'in_cantidades' in st.session_state: st.session_state['in_cantidades'] = 1
 
 def _generar_xlsx(datos):
-    INT_COLS   = {2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 20, 26, 28, 30}
+    INT_COLS   = {2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 20, 26, 27, 28, 29, 30}
     FLOAT_COLS = {19}
 
     wb = openpyxl.Workbook()
