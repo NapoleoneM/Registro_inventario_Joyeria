@@ -238,6 +238,42 @@ def actualizar_fila(sheet_id, fila_numero, datos_inputs, datos_ubicacion):
         print(f"Error actualizando fila {fila_numero}: {e}")
         return False
 
+def obtener_shopify(sheet_id):
+    """
+    Verifica que Inputs.AB tenga datos y retorna filas reales de CO/US Shopify.
+    Retorna: {"co": [...], "us": [...]} | {"error": "AB_VACIO"} | None
+    """
+    doc = conectar_documento(sheet_id)
+    if not doc:
+        return None
+    try:
+        hoja_inputs = doc.worksheet(WORKSHEET_NAME)
+        todos = hoja_inputs.get_all_values()
+        filas_datos = [f for f in todos[1:] if f and str(f[0]).strip()]
+
+        ab_vacio = any(len(f) <= 27 or not str(f[27]).strip() for f in filas_datos)
+        if ab_vacio:
+            return {"error": "AB_VACIO"}
+
+        def _leer_hoja(nombre):
+            hoja = doc.worksheet(nombre)
+            filas = hoja.get_all_values()
+            if not filas:
+                return []
+            encabezado = filas[0]
+            datos = []
+            for f in filas[1:]:
+                col0 = f[0].strip() if f else ""
+                if not col0 or col0.startswith('#') or any(c.strip().startswith('#') for c in f):
+                    break
+                datos.append(f)
+            return [encabezado] + datos
+
+        return {"co": _leer_hoja("CO Shopify"), "us": _leer_hoja("US Shopify")}
+    except Exception as e:
+        print(f"Error obteniendo Shopify: {e}")
+        return None
+
 def obtener_effiload(sheet_id):
     doc = conectar_documento(sheet_id)
     if not doc:

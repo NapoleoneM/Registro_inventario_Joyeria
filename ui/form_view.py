@@ -1,8 +1,9 @@
 import streamlit as st
 from datetime import datetime
 import io
+import csv
 import openpyxl
-from services.google_sheets import agregar_registro, limpiar_registros, obtener_ultimos_registros, eliminar_fila, actualizar_fila, obtener_effiload, notificar_n8n
+from services.google_sheets import agregar_registro, limpiar_registros, obtener_ultimos_registros, eliminar_fila, actualizar_fila, obtener_effiload, obtener_shopify, notificar_n8n
 
 # --- FUNCIÓN DE UTILIDAD PARA FORMATEO ---
 def formato_decimal_sheets(valor):
@@ -65,6 +66,14 @@ def _generar_xlsx(datos):
     return buf.getvalue()
 
 
+def _generar_csv(datos):
+    buf = io.StringIO()
+    writer = csv.writer(buf, quoting=csv.QUOTE_MINIMAL)
+    for fila in datos:
+        writer.writerow(fila)
+    return buf.getvalue().encode('utf-8-sig')
+
+
 def _prepopular_formulario(datos):
     def to_float(v):
         try: return float(str(v).replace(',', '.'))
@@ -119,6 +128,11 @@ def mostrar_formulario():
     if 'effiload_xlsx' not in st.session_state: st.session_state.effiload_xlsx = None
     if 'effiload_n' not in st.session_state: st.session_state.effiload_n = 0
     if 'effiload_nombre' not in st.session_state: st.session_state.effiload_nombre = 'EFFILoad.xlsx'
+    if 'shopify_co_csv' not in st.session_state: st.session_state.shopify_co_csv = None
+    if 'shopify_us_csv' not in st.session_state: st.session_state.shopify_us_csv = None
+    if 'shopify_co_nombre' not in st.session_state: st.session_state.shopify_co_nombre = ''
+    if 'shopify_us_nombre' not in st.session_state: st.session_state.shopify_us_nombre = ''
+    if 'shopify_n' not in st.session_state: st.session_state.shopify_n = 0
 
     # --- PROCESAR ACCIONES PENDIENTES (antes de renderizar cualquier widget) ---
     if '_datos_a_editar' in st.session_state:
@@ -519,42 +533,89 @@ def mostrar_formulario():
                     st.rerun()
 
     st.divider()
-    st.subheader("Exportar a Excel")
-    st.caption("Genera un .xlsx con los registros actuales de EFFILoad — solo filas con datos reales, sin fórmulas vacías.")
+    st.subheader("Exportar")
 
-    if st.session_state.effiload_xlsx is None:
-        if st.button("Exportar EFFILoad (.xlsx)", key="btn_exportar"):
-            _sid = st.session_state.get('sheet_asignado')
-            with st.spinner("Leyendo EFFILoad y generando archivo..."):
-                datos_effi = obtener_effiload(_sid)
-            if datos_effi is None:
-                st.error("No se pudo conectar a la hoja EFFILoad. Verifica que exista en el Sheets.")
-            elif len(datos_effi) <= 1:
-                st.info("EFFILoad no tiene registros con datos aún.")
-            else:
-                ahora    = datetime.now()
-                fecha    = ahora.strftime("%Y-%m-%d")
-                hora     = ahora.strftime("%H-%M")
-                usuario  = st.session_state.get('usuario_logueado', 'Auxiliar')
-                st.session_state.effiload_xlsx   = _generar_xlsx(datos_effi)
-                st.session_state.effiload_n      = len(datos_effi) - 1
-                st.session_state.effiload_nombre = f"EFFILoad_{fecha}_{hora}_{usuario}.xlsx"
-                st.rerun()
-    else:
-        nombre_archivo = st.session_state.get('effiload_nombre', 'EFFILoad.xlsx')
-        st.success(f"Archivo listo — {st.session_state.effiload_n} registros · {nombre_archivo}")
-        col_dl, col_reset = st.columns([2, 1])
-        with col_dl:
+    col_exp_effi, col_exp_shopify = st.columns(2)
+
+    with col_exp_effi:
+        st.caption("EFFILoad (.xlsx) — solo filas con datos reales.")
+        if st.session_state.effiload_xlsx is None:
+            if st.button("Exportar EFFILoad (.xlsx)", key="btn_exportar", width='stretch'):
+                _sid = st.session_state.get('sheet_asignado')
+                with st.spinner("Generando archivo..."):
+                    datos_effi = obtener_effiload(_sid)
+                if datos_effi is None:
+                    st.error("No se pudo conectar a EFFILoad.")
+                elif len(datos_effi) <= 1:
+                    st.info("EFFILoad no tiene registros aún.")
+                else:
+                    ahora   = datetime.now()
+                    usuario = st.session_state.get('usuario_logueado', 'Auxiliar')
+                    st.session_state.effiload_xlsx   = _generar_xlsx(datos_effi)
+                    st.session_state.effiload_n      = len(datos_effi) - 1
+                    st.session_state.effiload_nombre = f"EFFILoad_{ahora.strftime('%Y-%m-%d')}_{ahora.strftime('%H-%M')}_{usuario}.xlsx"
+                    st.rerun()
+        else:
+            nombre_archivo = st.session_state.effiload_nombre
+            st.success(f"{st.session_state.effiload_n} registros · {nombre_archivo}")
             st.download_button(
-                label="Descargar",
+                label="Descargar EFFILoad",
                 data=st.session_state.effiload_xlsx,
                 file_name=nombre_archivo,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                key="btn_dl_effi"
+                key="btn_dl_effi",
+                width='stretch'
             )
-        with col_reset:
-            if st.button("Nueva exportación", key="btn_nueva_exp"):
+            if st.button("Nueva exportación", key="btn_nueva_exp", width='stretch'):
                 st.session_state.effiload_xlsx = None
+                st.rerun()
+
+    with col_exp_shopify:
+        st.caption("Shopify (.csv) — requiere columna AB (ID Effi) completa.")
+        if st.session_state.shopify_co_csv is None:
+            if st.button("Exportar Shopify (.csv)", key="btn_exportar_shopify", width='stretch'):
+                _sid = st.session_state.get('sheet_asignado')
+                with st.spinner("Verificando IDs y generando archivos..."):
+                    resultado = obtener_shopify(_sid)
+                if resultado is None:
+                    st.error("No se pudo conectar a las hojas de Shopify.")
+                elif resultado.get("error") == "AB_VACIO":
+                    st.warning("La columna AB (ID Effi) tiene registros sin completar. Llena todos los IDs antes de exportar.")
+                else:
+                    co_datos = resultado["co"]
+                    us_datos = resultado["us"]
+                    if len(co_datos) <= 1 and len(us_datos) <= 1:
+                        st.info("Las hojas de Shopify no tienen registros aún.")
+                    else:
+                        ahora   = datetime.now()
+                        usuario = st.session_state.get('usuario_logueado', 'Auxiliar')
+                        st.session_state.shopify_co_csv    = _generar_csv(co_datos)
+                        st.session_state.shopify_us_csv    = _generar_csv(us_datos)
+                        st.session_state.shopify_co_nombre = f"CO_Shopify_{ahora.strftime('%Y-%m-%d')}_{ahora.strftime('%H-%M')}_{usuario}.csv"
+                        st.session_state.shopify_us_nombre = f"US_Shopify_{ahora.strftime('%Y-%m-%d')}_{ahora.strftime('%H-%M')}_{usuario}.csv"
+                        st.session_state.shopify_n         = max(len(co_datos), len(us_datos)) - 1
+                        st.rerun()
+        else:
+            st.success(f"{st.session_state.shopify_n} registros")
+            st.download_button(
+                label="Descargar CO Shopify",
+                data=st.session_state.shopify_co_csv,
+                file_name=st.session_state.shopify_co_nombre,
+                mime="text/csv",
+                key="btn_dl_co",
+                width='stretch'
+            )
+            st.download_button(
+                label="Descargar US Shopify",
+                data=st.session_state.shopify_us_csv,
+                file_name=st.session_state.shopify_us_nombre,
+                mime="text/csv",
+                key="btn_dl_us",
+                width='stretch'
+            )
+            if st.button("Nueva exportación", key="btn_nueva_shopify", width='stretch'):
+                st.session_state.shopify_co_csv = None
+                st.session_state.shopify_us_csv = None
                 st.rerun()
 
     st.divider()
