@@ -1,4 +1,6 @@
 import gspread
+import json
+import urllib.request
 from google.oauth2.service_account import Credentials
 from config.settings import CREDENTIALS_PATH, WORKSHEET_NAME
 
@@ -62,10 +64,29 @@ def agregar_registro(datos_inputs, datos_ubicacion, sheet_id):
                 })
             pestaña_ubicacion.batch_update(batch_ubi, value_input_option="USER_ENTERED")
             
-        return True
+        return siguiente_fila
     except Exception as e:
         print(f"Error al insertar datos: {e}")
         return False
+
+def notificar_n8n(sheet_id, fila, usuario):
+    """Dispara el webhook n8n para que genere la descripción IA en CO/US Shopify."""
+    import os
+    url = os.getenv("WEBHOOK_N8N_URL", "")
+    print(f"[n8n] notificar_n8n llamado → fila={fila}, usuario={usuario}, url='{url}'")
+    if not url:
+        print("[n8n] WEBHOOK_N8N_URL vacío — verifica el .env y reinicia Streamlit")
+        return
+    try:
+        payload = json.dumps({"sheet_id": sheet_id, "fila": fila, "usuario": usuario}).encode()
+        req = urllib.request.Request(
+            url, data=payload,
+            headers={"Content-Type": "application/json"}, method="POST"
+        )
+        urllib.request.urlopen(req, timeout=10)
+        print(f"[n8n] OK — Webhook disparado fila {fila}")
+    except Exception as e:
+        print(f"[n8n] ERROR enviando webhook: {e}")
 
 def limpiar_registros(sheet_id):
     """
@@ -84,15 +105,20 @@ def limpiar_registros(sheet_id):
             return "VACIO" # Abortamos antes de tocar el Sheets
             
         pestaña_ubicacion = doc.worksheet("Ubicación")
-        
+        pestaña_co = doc.worksheet("CO Shopify")
+        pestaña_us = doc.worksheet("US Shopify")
+
         # Limpiamos Inputs por rangos específicos (Se añadió AA2:AB3000)
         rangos_inputs = ["A2:K3000", "N2:W3000", "Y2:Z3000", "AA2:AB3000", "AC2:AD3000"]
         pestaña_inputs.batch_clear(rangos_inputs)
-        
+
         # Limpiamos Ubicación
-        rangos_ubicacion = ["C2:E3000"]
-        pestaña_ubicacion.batch_clear(rangos_ubicacion)
-        
+        pestaña_ubicacion.batch_clear(["C2:E3000"])
+
+        # Limpiamos descripciones IA generadas por n8n
+        pestaña_co.batch_clear(["C2:C3000"])
+        pestaña_us.batch_clear(["C2:C3000"])
+
         return True
     except Exception as e:
         print(f"Error al limpiar datos: {e}")

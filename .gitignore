@@ -4,3 +4,4 @@ credentials/credenciales.json
 CLAUDE.md
 .venv/
 env/
+n8n_workflow.json

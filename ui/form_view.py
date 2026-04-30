@@ -2,7 +2,7 @@ import streamlit as st
 from datetime import datetime
 import io
 import openpyxl
-from services.google_sheets import agregar_registro, limpiar_registros, obtener_ultimos_registros, eliminar_fila, actualizar_fila, obtener_effiload
+from services.google_sheets import agregar_registro, limpiar_registros, obtener_ultimos_registros, eliminar_fila, actualizar_fila, obtener_effiload, notificar_n8n
 
 # --- FUNCIÓN DE UTILIDAD PARA FORMATEO ---
 def formato_decimal_sheets(valor):
@@ -152,7 +152,7 @@ def mostrar_formulario():
         st.markdown("## Registro inventario de Joyería")
         st.markdown("*Campos obligatorios según selección")
     with col_logo:
-        st.image("assets/1.png", use_container_width=True)
+        st.image("assets/1.png", width='stretch')
 
     st.divider()
 
@@ -337,28 +337,28 @@ def mostrar_formulario():
             with c_ubi1:
                 st.write("Columna (A-Z) (Opcional)")
                 btn_texto_col = st.session_state.pop_col if st.session_state.pop_col else "Seleccionar"
-                with st.popover(btn_texto_col, use_container_width=True):
+                with st.popover(btn_texto_col, width='stretch'):
                     grid_cols = st.columns(5)
                     for i, letra in enumerate(letras_az):
-                        if grid_cols[i % 5].button(letra, key=f"btn_c_{letra}", use_container_width=True):
+                        if grid_cols[i % 5].button(letra, key=f"btn_c_{letra}", width='stretch'):
                             st.session_state.pop_col = letra
                             st.rerun() 
             with c_ubi2:
                 st.write("Paño (1-50) (Opcional)")
                 btn_texto_pano = str(st.session_state.pop_pano) if st.session_state.pop_pano else "Seleccionar"
-                with st.popover(btn_texto_pano, use_container_width=True):
+                with st.popover(btn_texto_pano, width='stretch'):
                     grid_panos = st.columns(5)
                     for num in range(1, 51):
-                        if grid_panos[(num - 1) % 5].button(str(num), key=f"btn_p_{num}", use_container_width=True):
+                        if grid_panos[(num - 1) % 5].button(str(num), key=f"btn_p_{num}", width='stretch'):
                             st.session_state.pop_pano = num
                             st.rerun()
             with c_ubi3:
                 st.write("Celda (A-Z) (Opcional)")
                 btn_texto_celda = st.session_state.pop_celda if st.session_state.pop_celda else "Seleccionar"
-                with st.popover(btn_texto_celda, use_container_width=True):
+                with st.popover(btn_texto_celda, width='stretch'):
                     grid_celdas = st.columns(5)
                     for i, letra in enumerate(letras_az):
-                        if grid_celdas[i % 5].button(letra, key=f"btn_ce_{letra}", use_container_width=True):
+                        if grid_celdas[i % 5].button(letra, key=f"btn_ce_{letra}", width='stretch'):
                             st.session_state.pop_celda = letra
                             st.rerun()
         else:
@@ -373,7 +373,7 @@ def mostrar_formulario():
             st.error(f"Faltan datos obligatorios para este modelo/categoría: {', '.join(errores_validacion)}")
             
         lbl_guardar = "Actualizar Registro" if st.session_state.fila_editando else "Guardar Registro"
-        if st.button(lbl_guardar, type="primary", disabled=bloquear_boton, use_container_width=True):
+        if st.button(lbl_guardar, type="primary", disabled=bloquear_boton, width='stretch'):
             
             val_creativo = st.session_state.get('in_creativo', "")
             val_talla = st.session_state.get('in_talla', "")
@@ -473,6 +473,7 @@ def mostrar_formulario():
                     st.session_state.fila_editando = None
                 else:
                     st.success(f"Registro exitoso! (Auxiliar: {auxiliar_actual})")
+                    notificar_n8n(mi_archivo_id, exito, auxiliar_actual)
                 st.session_state.hoja_limpia = False
                 st.session_state.historial_cache = obtener_ultimos_registros(mi_archivo_id, n=5)
                 st.button("Registrar Nuevo Artículo", type="secondary", on_click=limpiar_formulario_parcial)

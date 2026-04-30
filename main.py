@@ -33,7 +33,7 @@ def main():
         
         # Agregamos un botón en la barra lateral para salir
         st.sidebar.markdown("---")
-        if st.sidebar.button("Cerrar Sesión", use_container_width=True):
+        if st.sidebar.button("Cerrar Sesión", width='stretch'):
             st.session_state['usuario_logueado'] = None
             st.rerun()
 
